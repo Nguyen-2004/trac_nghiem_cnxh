@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Subject {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  freePracticeEnabled Boolean @default(false)
+  chapters    Chapter[]
+  exams       ExamSet[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Chapter {
+  id        String     @id @default(cuid())
+  subjectId String
+  subject   Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  name      String
+  order     Int        @default(0)
+  questions Question[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([subjectId, name])
+  @@index([subjectId, order])
+}
+
+model Question {
+  id            String             @id @default(cuid())
+  chapterId     String
+  chapter       Chapter            @relation(fields: [chapterId], references: [id], onDelete: Restrict)
+  content       String
+  order         Int                @default(0)
+  status        QuestionStatus     @default(NEEDS_REVIEW)
+  choices       Choice[]
+  examQuestions ExamSetQuestion[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([chapterId, order])
+  @@index([status])
+}
+
+model Choice {
+  id        String   @id @default(cuid())
+  questionId String
+  question  Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  content   String
+  order     Int      @default(0)
+  isCorrect Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([questionId, order])
+}
+
+model ExamSet {
+  id               String             @id @default(cuid())
+  subjectId        String
+  subject          Subject            @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  title            String
+  description      String?
+  mode             ExamMode           @default(EXAM)
+  shuffleQuestions Boolean            @default(false)
+  shuffleChoices   Boolean            @default(false)
+  showAnswers      Boolean            @default(false)
+  active           Boolean            @default(true)
+  questions        ExamSetQuestion[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([subjectId, active])
+}
+
+model ExamSetQuestion {
+  examSetId String
+  questionId String
+  order     Int      @default(0)
+  examSet   ExamSet  @relation(fields: [examSetId], references: [id], onDelete: Cascade)
+  question  Question @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  @@id([examSetId, questionId])
+  @@index([examSetId, order])
+}
+
+model ImportBatch {
+  id            String       @id @default(cuid())
+  fileName      String
+  status        ImportStatus @default(PREVIEWED)
+  questionCount Int          @default(0)
+  warningCount  Int          @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+enum QuestionStatus {
+  CONFIRMED
+  NEEDS_REVIEW
+}
+
+enum ExamMode {
+  PRACTICE
+  EXAM
+}
+
+enum ImportStatus {
+  PREVIEWED
+  IMPORTED
+}

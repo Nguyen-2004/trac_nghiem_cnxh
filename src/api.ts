@@ -1,0 +1,3 @@
+let csrfToken='';
+export async function api<T=any>(url:string,options:RequestInit={}):Promise<T>{const headers=new Headers(options.headers);if(options.body&&!(options.body instanceof FormData))headers.set('Content-Type','application/json');if(csrfToken&&options.method&&options.method!=='GET')headers.set('x-csrf-token',csrfToken);const res=await fetch(url,{...options,headers,credentials:'same-origin'});const type=res.headers.get('content-type')||'';if(!res.ok){const data=type.includes('json')?await res.json():null;throw new Error(data?.error||`Lỗi ${res.status}`);}return type.includes('json')?res.json():res as T;}
+export const setCsrf=(token:string)=>{csrfToken=token;};export const json=(method:string,data:unknown):RequestInit=>({method,body:JSON.stringify(data)});
